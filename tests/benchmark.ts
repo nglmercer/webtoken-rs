@@ -8,36 +8,39 @@ const cost = 10;
 
 // Setup
 console.log("Generating hashes for verification benchmark...");
-const rHash = rustHash(password, cost);
+const rHash = await rustHash(password, 3, 4096, 1);
 const bHash = await Bun.password.hash(password, {
   algorithm: "bcrypt",
-  cost: cost,
+  cost: 10,
 });
 
-group("Password Hashing (Cost 10)", () => {
-  bench("Rust (NAPI/Bcrypt)", () => {
-    rustHash(password, cost);
+group("Password Hashing (Argon2id vs Bcrypt)", () => {
+  bench("Rust (NAPI/Argon2id) - Default (3 iter, 4MB)", async () => {
+    await rustHash(password);
   });
 
-  bench("Bun (Native)", async () => {
+  bench("Rust (NAPI/Argon2id) - High Mem (2 iter, 16MB)", async () => {
+    await rustHash(password, 2, 16384);
+  });
+
+  bench("Bun (Native/Bcrypt) - Cost 10", async () => {
     await Bun.password.hash(password, {
       algorithm: "bcrypt",
-      cost: cost,
+      cost: 10,
     });
   });
 
   bench("Node Crypto (Scrypt)", () => {
-    // Scrypt is a different algorithm but also a secure KDF available in Node Crypto
     crypto.scryptSync(password, "salt-for-scrypt", 64, { cost: 1024 });
   });
 });
 
 group("Password Verification", () => {
-  bench("Rust (NAPI/Bcrypt)", () => {
-    rustCompare(password, rHash);
+  bench("Rust (NAPI/Argon2id)", async () => {
+    await rustCompare(password, rHash);
   });
 
-  bench("Bun (Native)", async () => {
+  bench("Bun (Native/Bcrypt)", async () => {
     await Bun.password.verify(password, bHash);
   });
 });
@@ -62,3 +65,4 @@ group("JWT Creation (HS256)", () => {
 });
 
 await run();
+

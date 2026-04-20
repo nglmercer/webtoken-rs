@@ -29,34 +29,43 @@ impl From<Algorithm> for JwtAlgorithm {
 }
 
 #[napi]
-pub fn hash(password: String, iterations: Option<u32>, memory: Option<u32>) -> Result<String> {
-    let salt = SaltString::generate(&mut OsRng);
-    
-    let params = Params::new(
-        memory.unwrap_or(Params::DEFAULT_M_COST),
-        iterations.unwrap_or(Params::DEFAULT_T_COST),
-        Params::DEFAULT_P_COST,
-        None,
-    ).map_err(|e| Error::from_reason(format!("Argon2 params error: {}", e)))?;
+pub async fn hash(password: String, iterations: Option<u32>, memory: Option<u32>, parallelism: Option<u32>) -> Result<String> {
+    tokio::task::spawn_blocking(move || {
+        let salt = SaltString::generate(&mut OsRng);
+        
+        let params = Params::new(
+            memory.unwrap_or(Params::DEFAULT_M_COST),
+            iterations.unwrap_or(Params::DEFAULT_T_COST),
+            parallelism.unwrap_or(Params::DEFAULT_P_COST),
+            None,
+        ).map_err(|e| Error::from_reason(format!("Argon2 params error: {}", e)))?;
 
-    let argon2 = Argon2::new(
-        argon2::Algorithm::Argon2id,
-        argon2::Version::V0x13,
-        params,
-    );
+        let argon2 = Argon2::new(
+            argon2::Algorithm::Argon2id,
+            argon2::Version::V0x13,
+            params,
+        );
 
-    argon2.hash_password(password.as_bytes(), &salt)
-        .map_err(|e| Error::from_reason(format!("Argon2 hashing error: {}", e)))
-        .map(|h| h.to_string())
+        argon2.hash_password(password.as_bytes(), &salt)
+            .map_err(|e| Error::from_reason(format!("Argon2 hashing error: {}", e)))
+            .map(|h| h.to_string())
+    })
+    .await
+    .map_err(|e| Error::from_reason(format!("Task join error: {}", e)))?
 }
 
 #[napi]
-pub fn compare(password: String, hash: String) -> Result<bool> {
-    let parsed_hash = PasswordHash::new(&hash)
-        .map_err(|e| Error::from_reason(format!("Invalid hash format: {}", e)))?;
-    
-    Ok(Argon2::default().verify_password(password.as_bytes(), &parsed_hash).is_ok())
+pub async fn compare(password: String, hash: String) -> Result<bool> {
+    tokio::task::spawn_blocking(move || {
+        let parsed_hash = PasswordHash::new(&hash)
+            .map_err(|e| Error::from_reason(format!("Invalid hash format: {}", e)))?;
+        
+        Ok(Argon2::default().verify_password(password.as_bytes(), &parsed_hash).is_ok())
+    })
+    .await
+    .map_err(|e| Error::from_reason(format!("Task join error: {}", e)))?
 }
+
 
 
 #[napi(object)]

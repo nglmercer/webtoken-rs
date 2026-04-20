@@ -6,44 +6,45 @@ describe("Webtoken NAPI Tests", () => {
   const secret = "super-secret-key";
 
   describe("Argon2 Hashing", () => {
-    test("should hash password successfully", () => {
-      const result = hash(password);
+    test("should hash password successfully", async () => {
+      const result = await hash(password);
       expect(result).toBeDefined();
       expect(result.length).toBeGreaterThan(0);
       expect(result).toStartWith("$argon2id"); // Argon2id prefix
     });
 
-    test("should compare correct password", () => {
-      const hashed = hash(password);
-      const isMatch = compare(password, hashed);
+    test("should compare correct password", async () => {
+      const hashed = await hash(password);
+      const isMatch = await compare(password, hashed);
       expect(isMatch).toBe(true);
     });
 
-    test("should fail on wrong password", () => {
-      const hashed = hash(password);
-      const isMatch = compare("wrong-password", hashed);
+    test("should fail on wrong password", async () => {
+      const hashed = await hash(password);
+      const isMatch = await compare("wrong-password", hashed);
       expect(isMatch).toBe(false);
     });
 
-    test("should respect custom iterations", () => {
+    test("should respect custom iterations", async () => {
       const start = performance.now();
-      hash(password, 5); // iterations
+      await hash(password, 5); // iterations
       const end = performance.now();
       const highCostTime = end - start;
 
       const startLow = performance.now();
-      hash(password, 1); // iterations
+      await hash(password, 1); // iterations
       const endLow = performance.now();
       const lowCostTime = endLow - startLow;
 
       expect(highCostTime).toBeGreaterThan(lowCostTime);
     });
 
-    test("should respect custom memory", () => {
-      const result = hash(password, 2, 8192); // 8MB memory
+    test("should respect custom memory", async () => {
+      const result = await hash(password, 2, 8192); // 8MB memory
       expect(result).toContain("m=8192");
     });
   });
+
 
 
   describe("JWT Creation", () => {
