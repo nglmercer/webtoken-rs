@@ -83,6 +83,18 @@ for (const cfg of targets) {
       // Linux cross (napi-cross docker image / qemu)
       await $`npx napi build --release --target ${target} --use-napi-cross --platform`;
 
+    } else if ("xwinDirect" in cfg && cfg.xwinDirect) {
+      // aarch64-pc-windows-msvc: napi-cross toolchain doesn't support this triple
+      // from an x64 Linux host. Use cargo-xwin directly by setting XWIN_ARCH so
+      // it downloads the ARM64 Windows SDK instead of the default x64 one.
+      const env = {
+        ...process.env,
+        XWIN_ARCH: "aarch64",
+        // Ensure cargo picks up xwin's sysroot for the linker
+        CARGO_TARGET_AARCH64_PC_WINDOWS_MSVC_LINKER: "lld-link",
+      };
+      await $`npx napi build --release --target ${target} --cross-compile --platform`.env(env);
+
     } else if ("cross" in cfg && cfg.cross) {
       if (cfg.apple && sdkRoot) {
         // macOS cross: set SDKROOT so cargo-zigbuild can find frameworks
