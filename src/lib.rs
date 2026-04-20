@@ -23,6 +23,43 @@ pub async fn hash(password: String, iterations: Option<u32>, memory: Option<u32>
 }
 
 #[cfg(feature = "napi-base")]
+#[napi(object)]
+pub struct OpaqueRegisterStartResult {
+  pub request: String,
+  pub state: String,
+}
+
+#[cfg(feature = "napi-base")]
+#[napi(object)]
+pub struct OpaqueRegisterFinishResult {
+  pub upload: String,
+  pub export_key: String,
+}
+
+#[cfg(feature = "napi-base")]
+#[napi(object)]
+pub struct OpaqueLoginStartResult {
+  pub request: String,
+  pub state: String,
+}
+
+#[cfg(feature = "napi-base")]
+#[napi(object)]
+pub struct OpaqueServerLoginStartResult {
+  pub response: String,
+  pub state: String,
+}
+
+#[cfg(feature = "napi-base")]
+#[napi(object)]
+pub struct OpaqueLoginFinishResult {
+  pub finalization: String,
+  pub session_key: String,
+  pub export_key: String,
+  pub server_public_key: String,
+}
+
+#[cfg(feature = "napi-base")]
 #[napi]
 pub async fn compare(password: String, hash: String) -> Result<bool> {
     tokio::task::spawn_blocking(move || {
@@ -58,13 +95,20 @@ pub fn verify_public(token: String, public_key_hex: String) -> Result<Map<String
 }
 
 #[cfg(feature = "napi-base")]
+#[napi(object)]
+pub struct KeyGenerationResult {
+  pub secret_key: String,
+  pub public_key: String,
+}
+
+#[cfg(feature = "napi-base")]
 #[napi]
-pub fn generate_keys() -> Result<Map<String, Value>> {
+pub fn generate_keys() -> Result<KeyGenerationResult> {
     let (sk, pk) = paseto::internal_generate_keys();
-    let mut map = Map::new();
-    map.insert("secretKey".to_string(), Value::String(sk));
-    map.insert("publicKey".to_string(), Value::String(pk));
-    Ok(map)
+    Ok(KeyGenerationResult {
+        secret_key: sk,
+        public_key: pk,
+    })
 }
 
 #[cfg(feature = "napi-base")]
@@ -75,12 +119,12 @@ pub fn opaque_generate_server_setup() -> String {
 
 #[cfg(feature = "napi-base")]
 #[napi]
-pub fn opaque_client_register_start(password: String) -> Result<Map<String, Value>> {
+pub fn opaque_client_register_start(password: String) -> Result<OpaqueRegisterStartResult> {
     let res = opaque::internal_client_register_start(&password).map_err(|e| Error::from_reason(e))?;
-    let mut map = Map::new();
-    map.insert("request".to_string(), Value::String(res.request));
-    map.insert("state".to_string(), Value::String(res.state));
-    Ok(map)
+    Ok(OpaqueRegisterStartResult {
+        request: res.request,
+        state: res.state,
+    })
 }
 
 #[cfg(feature = "napi-base")]
@@ -97,13 +141,13 @@ pub fn opaque_client_register_finish(
     state_hex: String,
     client_id: Option<String>,
     server_id: Option<String>,
-) -> Result<Map<String, Value>> {
+) -> Result<OpaqueRegisterFinishResult> {
     let res = opaque::internal_client_register_finish(&password, &response_hex, &state_hex, client_id, server_id)
         .map_err(|e| Error::from_reason(e))?;
-    let mut map = Map::new();
-    map.insert("upload".to_string(), Value::String(res.upload));
-    map.insert("exportKey".to_string(), Value::String(res.export_key));
-    Ok(map)
+    Ok(OpaqueRegisterFinishResult {
+        upload: res.upload,
+        export_key: res.export_key,
+    })
 }
 
 #[cfg(feature = "napi-base")]
@@ -114,12 +158,12 @@ pub fn opaque_server_register_finish(upload_hex: String) -> Result<String> {
 
 #[cfg(feature = "napi-base")]
 #[napi]
-pub fn opaque_client_login_start(password: String) -> Result<Map<String, Value>> {
+pub fn opaque_client_login_start(password: String) -> Result<OpaqueLoginStartResult> {
     let res = opaque::internal_client_login_start(&password).map_err(|e| Error::from_reason(e))?;
-    let mut map = Map::new();
-    map.insert("request".to_string(), Value::String(res.request));
-    map.insert("state".to_string(), Value::String(res.state));
-    Ok(map)
+    Ok(OpaqueLoginStartResult {
+        request: res.request,
+        state: res.state,
+    })
 }
 
 #[cfg(feature = "napi-base")]
@@ -130,13 +174,13 @@ pub fn opaque_server_login_start(
     request_hex: String,
     client_id: String,
     server_id: Option<String>,
-) -> Result<Map<String, Value>> {
+) -> Result<OpaqueServerLoginStartResult> {
     let res = opaque::internal_server_login_start(&server_setup_hex, &password_file_hex, &request_hex, &client_id, server_id)
         .map_err(|e| Error::from_reason(e))?;
-    let mut map = Map::new();
-    map.insert("response".to_string(), Value::String(res.response));
-    map.insert("state".to_string(), Value::String(res.state));
-    Ok(map)
+    Ok(OpaqueServerLoginStartResult {
+        response: res.response,
+        state: res.state,
+    })
 }
 
 #[cfg(feature = "napi-base")]
@@ -147,15 +191,15 @@ pub fn opaque_client_login_finish(
     state_hex: String,
     client_id: Option<String>,
     server_id: Option<String>,
-) -> Result<Map<String, Value>> {
+) -> Result<OpaqueLoginFinishResult> {
     let res = opaque::internal_client_login_finish(&password, &response_hex, &state_hex, client_id, server_id)
         .map_err(|e| Error::from_reason(e))?;
-    let mut map = Map::new();
-    map.insert("finalization".to_string(), Value::String(res.finalization));
-    map.insert("sessionKey".to_string(), Value::String(res.session_key));
-    map.insert("exportKey".to_string(), Value::String(res.export_key));
-    map.insert("serverPublicKey".to_string(), Value::String(res.server_public_key));
-    Ok(map)
+    Ok(OpaqueLoginFinishResult {
+        finalization: res.finalization,
+        session_key: res.session_key,
+        export_key: res.export_key,
+        server_public_key: res.server_public_key,
+    })
 }
 
 #[cfg(feature = "napi-base")]
