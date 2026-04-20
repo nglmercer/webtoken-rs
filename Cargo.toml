@@ -1,11 +1,10 @@
 [package]
-name = "napi_template"
+name = "webtoken"
 version = "1.0.0"
 edition = "2021"
 
 [lib]
 crate-type = ["cdylib"]
-name = "napi_template"
 
 [package.metadata.napi]
 targets = [
@@ -19,12 +18,15 @@ targets = [
 
 [dependencies]
 napi = { version = "3.8.2", features = ["napi9", "async"] }
-napi-derive = "3.5.1"
+napi-derive = "3.5.4"
+bcrypt = "0.15"
+jsonwebtoken = "9"
+serde = { version = "1.0", features = ["derive"] }
 chrono = "0.4"
 tokio = { version = "1", features = ["full"] }
 
 [build-dependencies]
-napi-build = "2.3.1"
+napi-build = "2.1"
 
 [profile.release]
 lto = true
