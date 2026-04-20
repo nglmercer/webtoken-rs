@@ -1,7 +1,7 @@
 use pasetors::version4::V4;
 use pasetors::{local, public};
 use pasetors::claims::{Claims, ClaimsValidationRules};
-use pasetors::keys::{SymmetricKey, AsymmetricPublicKey, AsymmetricSecretKey};
+use pasetors::keys::{SymmetricKey, AsymmetricPublicKey, AsymmetricSecretKey, AsymmetricKeyPair, Generate};
 use pasetors::token::UntrustedToken;
 use sha2::{Sha256, Digest};
 use chrono::{Utc, Duration};
@@ -12,6 +12,11 @@ pub fn derive_symmetric_key(secret: &str) -> SymmetricKey<V4> {
     hasher.update(secret.as_bytes());
     let result = hasher.finalize();
     SymmetricKey::<V4>::from(result.as_slice()).unwrap()
+}
+
+pub fn internal_generate_keys() -> (String, String) {
+    let kp = AsymmetricKeyPair::<V4>::generate().unwrap();
+    (hex::encode(kp.secret.as_bytes()), hex::encode(kp.public.as_bytes()))
 }
 
 pub fn internal_create_local(payload: Map<String, Value>, secret: String, expires_in_seconds: Option<i64>) -> Result<String, String> {

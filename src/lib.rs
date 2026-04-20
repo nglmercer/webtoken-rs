@@ -59,6 +59,16 @@ pub fn verify_public(token: String, public_key_hex: String) -> Result<Map<String
 
 #[cfg(feature = "napi-base")]
 #[napi]
+pub fn generate_keys() -> Result<Map<String, Value>> {
+    let (sk, pk) = paseto::internal_generate_keys();
+    let mut map = Map::new();
+    map.insert("secretKey".to_string(), Value::String(sk));
+    map.insert("publicKey".to_string(), Value::String(pk));
+    Ok(map)
+}
+
+#[cfg(feature = "napi-base")]
+#[napi]
 pub fn decode_token(_token: String) -> Result<Map<String, Value>> {
     Err(Error::from_reason("PASETO local tokens are encrypted and cannot be decoded without the secret key."))
 }

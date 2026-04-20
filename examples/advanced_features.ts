@@ -1,4 +1,4 @@
-import { hash, compare, createPublic, verifyPublic } from "../index";
+import { hash, compare, createPublic, verifyPublic, generateKeys } from "../index";
 
 async function main() {
   console.log("--- 1. Hardware-Accelerated Argon2id (SIMD) ---");
@@ -17,12 +17,13 @@ async function main() {
   console.log("--- 2. Public-Key PASETO (Ed25519) ---");
 
   /**
-   * For Ed25519, you typically have a 64-byte secret key and a 32-byte public key.
-   * Here are example hex-encoded keys for demonstration.
-   * In production, generate these using a secure library.
+   * For Ed25519, pasetors expects a 64-byte secret key.
    */
-  const secretKeyHex = "b4c8a95311c67f0329a1b635201c107f90c37e937d4036f0195668e21a221236";
-  const publicKeyHex = "66c85777a060f64c6778f6927a4d57a2e0a2d59048f075047b85c156f4d2a13a";
+  const keys = generateKeys();
+  const secretKeyHex = keys.secretKey;
+  const publicKeyHex = keys.publicKey;
+
+
 
   const payload = {
     sub: "user_asymmetric_123",

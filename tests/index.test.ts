@@ -1,5 +1,5 @@
 import { expect, test, describe } from "bun:test";
-import { hash, compare, create, verify } from "../index";
+import { hash, compare, create, verify, generateKeys, createPublic, verifyPublic, decodeToken } from "../index";
 
 describe("Webtoken NAPI Tests", () => {
   const password = "my-secure-password";
@@ -43,9 +43,12 @@ describe("Webtoken NAPI Tests", () => {
       const result = await hash(password, 2, 8192); // 8MB memory
       expect(result).toContain("m=8192");
     });
+
+    test("should respect custom parallelism", async () => {
+      const result = await hash(password, 2, 4096, 4); // p=4
+      expect(result).toContain("p=4");
+    });
   });
-
-
 
   describe("PASETO Tokens (V4 Local)", () => {
     test("should create a valid PASETO string", () => {
@@ -69,12 +72,47 @@ describe("Webtoken NAPI Tests", () => {
     });
 
     test("should throw error for expired token", () => {
-      // PASETO v4.local uses ISO8601 for expiration. 
-      // Negative offset in create should result in an expired token.
       const token = create({ sub: "123" }, secret, -100);
       expect(() => verify(token, secret)).toThrow();
     });
+  });
 
+  describe("PASETO Keys", () => {
+    test("should generate valid asymmetric keys", () => {
+      const keys = generateKeys();
+      expect(keys.secretKey).toBeDefined();
+      expect(keys.publicKey).toBeDefined();
+      expect(keys.secretKey.length).toBe(128); // 64 bytes in hex
+      expect(keys.publicKey.length).toBe(64);   // 32 bytes in hex
+    });
+  });
+
+  describe("PASETO Tokens (V4 Public)", () => {
+    const keys = generateKeys();
+
+    test("should create and verify asymmetric tokens", () => {
+      const payload = { sub: "user-public", role: "editor" };
+      const token = createPublic(payload, keys.secretKey, 3600);
+      expect(token).toStartWith("v4.public.");
+
+      const verified = verifyPublic(token, keys.publicKey);
+      expect(verified.sub).toBe(payload.sub);
+      expect(verified.role).toBe(payload.role);
+    });
+
+    test("should fail with invalid public key", () => {
+      const payload = { sub: "test" };
+      const token = createPublic(payload, keys.secretKey, 3600);
+      const otherKeys = generateKeys();
+      expect(() => verifyPublic(token, otherKeys.publicKey)).toThrow();
+    });
+  });
+
+  describe("Token Utilities", () => {
+    test("decodeToken should throw error for local tokens (unsupported)", () => {
+      const token = create({ sub: "test" }, secret, 3600);
+      expect(() => decodeToken(token)).toThrow();
+    });
   });
 });
 
