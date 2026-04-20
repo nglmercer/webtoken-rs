@@ -1,8 +1,13 @@
 use napi::bindgen_prelude::*;
 use napi_derive::napi;
-use bcrypt::{hash as bcrypt_hash, verify as bcrypt_verify, DEFAULT_COST};
+use argon2::{
+    password_hash::{
+        rand_core::OsRng,
+        PasswordHash, PasswordHasher, PasswordVerifier, SaltString
+    },
+    Argon2, Params
+};
 use jsonwebtoken::{encode, decode, Header, EncodingKey, DecodingKey, Validation, Algorithm as JwtAlgorithm};
-use serde::{Deserialize, Serialize};
 use chrono::{Utc, Duration};
 use serde_json::{Value, Map};
 
@@ -24,16 +29,35 @@ impl From<Algorithm> for JwtAlgorithm {
 }
 
 #[napi]
-pub fn hash(password: String, cost: Option<u32>) -> Result<String> {
-    bcrypt_hash(password, cost.unwrap_or(DEFAULT_COST))
-        .map_err(|e| Error::from_reason(format!("Bcrypt hashing error: {}", e)))
+pub fn hash(password: String, iterations: Option<u32>, memory: Option<u32>) -> Result<String> {
+    let salt = SaltString::generate(&mut OsRng);
+    
+    let params = Params::new(
+        memory.unwrap_or(Params::DEFAULT_M_COST),
+        iterations.unwrap_or(Params::DEFAULT_T_COST),
+        Params::DEFAULT_P_COST,
+        None,
+    ).map_err(|e| Error::from_reason(format!("Argon2 params error: {}", e)))?;
+
+    let argon2 = Argon2::new(
+        argon2::Algorithm::Argon2id,
+        argon2::Version::V0x13,
+        params,
+    );
+
+    argon2.hash_password(password.as_bytes(), &salt)
+        .map_err(|e| Error::from_reason(format!("Argon2 hashing error: {}", e)))
+        .map(|h| h.to_string())
 }
 
 #[napi]
 pub fn compare(password: String, hash: String) -> Result<bool> {
-    bcrypt_verify(password, &hash)
-        .map_err(|e| Error::from_reason(format!("Bcrypt comparison error: {}", e)))
+    let parsed_hash = PasswordHash::new(&hash)
+        .map_err(|e| Error::from_reason(format!("Invalid hash format: {}", e)))?;
+    
+    Ok(Argon2::default().verify_password(password.as_bytes(), &parsed_hash).is_ok())
 }
+
 
 #[napi(object)]
 pub struct TokenHeader {

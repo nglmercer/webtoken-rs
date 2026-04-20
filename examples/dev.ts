@@ -6,4 +6,4 @@ const cost = 10;
 const hashed = hash(password, cost);
 console.log("hashed", hashed);
 console.log("compare", compare(password, hashed));
-console.log("create", create("user-123", "secret", 3600));
+console.log("create", create({ user: "user-123" }, "secret", 3600));

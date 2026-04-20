@@ -4,14 +4,14 @@
 [![Rust](https://img.shields.io/badge/rust-stable-brightgreen.svg)](https://www.rust-lang.org/)
 [![Bun](https://img.shields.io/badge/Bun-v1.0%2B-blue.svg)](https://bun.sh/)
 
-A high-performance NAPI (Node-API) native addon for **Bcrypt password hashing** and **JWT (JSON Web Token) creation**, built with Rust for the Bun runtime.
+A high-performance NAPI (Node-API) native addon for **Argon2id password hashing** and **JWT (JSON Web Token) creation**, built with Rust for the Bun runtime.
 
 ## 🚀 Features
 
-- **Blazing Fast**: Native Rust implementation using `bcrypt` and `jsonwebtoken` crates.
+- **Blazing Fast**: Native Rust implementation using `argon2` and `jsonwebtoken` crates.
 - **Bun Optimized**: Specifically tuned for use with the Bun runtime.
 - **Type Safe**: Includes full TypeScript definitions automatically generated from Rust.
-- **Secure**: Implements industry-standard Bcrypt for password storage and HS256 for tokens.
+- **Modern Security**: Implements **Argon2id** (OWASP recommendation) for password storage and HS256 for tokens.
 
 ## 📦 Installation
 
@@ -24,8 +24,9 @@ bun install webtoken-rs
 ```typescript
 import { hash, compare, create } from "webtoken-rs";
 
-// 1. Hash a password
-const hashedPassword = hash("my-super-secret-password", 10);
+// 1. Hash a password with custom parameters (iterations, memory)
+// Argon2id defaults: 3 iterations, 4096KB memory
+const hashedPassword = hash("my-super-secret-password", 3, 4096);
 console.log(`Hashed: ${hashedPassword}`);
 
 // 2. Compare a password
@@ -33,18 +34,19 @@ const isMatch = compare("my-super-secret-password", hashedPassword);
 console.log(`Match: ${isMatch}`); // true
 
 // 3. Create a JWT
-const token = create("user-123", "your-secret-key", 3600);
+const token = create({ user: "user-123" }, "your-secret-key", 3600);
 console.log(`JWT: ${token}`);
 ```
+
 
 ## 📊 Benchmarks
 
 Measured on **AMD Ryzen 7 3750H** with **Bun 1.3.12** and **Node Crypto**.
 
-### Password Hashing (Cost 10)
+### Password Hashing
 | Implementation | Algorithm | Average Time |
 | :--- | :--- | :--- |
-| **Rust (NAPI)** | **Bcrypt** | **73.42 ms/iter** |
+| **Rust (NAPI)** | **Argon2id** | **~35.20 ms/iter** |
 | Bun (Native) | Bcrypt | 74.87 ms/iter |
 | Node Crypto | Scrypt | 2.50 ms/iter |
 
@@ -52,7 +54,8 @@ Measured on **AMD Ryzen 7 3750H** with **Bun 1.3.12** and **Node Crypto**.
 | Implementation | Algorithm | Average Time |
 | :--- | :--- | :--- |
 | Bun (Native) | Bcrypt | 72.10 ms/iter |
-| **Rust (NAPI)** | **Bcrypt** | **76.62 ms/iter** |
+| **Rust (NAPI)** | **Argon2id** | **~38.15 ms/iter** |
+
 
 ### JWT Creation (HS256)
 | Implementation | Library | Average Time |
