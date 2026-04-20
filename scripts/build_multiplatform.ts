@@ -2,7 +2,7 @@ import { $ } from "bun";
 
 const targets = [
   { target: "x86_64-pc-windows-msvc", cross: true },
-  { target: "i686-pc-windows-msvc", cross: true },
+  { target: "aarch64-pc-windows-msvc", cross: true },
   { target: "x86_64-apple-darwin", cross: true },
   { target: "aarch64-apple-darwin", cross: true },
   { target: "aarch64-unknown-linux-gnu", napiCross: true },
@@ -26,7 +26,7 @@ const results: { target: string; success: boolean }[] = [];
 
 for (const { target, cross, napiCross, native } of targets) {
   console.log(`\n🛠️  Building for ${target}...`);
-  
+
   try {
     if (native) {
       await $`npx napi build --release --platform`;

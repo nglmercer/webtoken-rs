@@ -17,7 +17,7 @@ Run this command once to install all necessary Rust toolchains:
 ```bash
 rustup target add \
   x86_64-pc-windows-msvc \
-  i686-pc-windows-msvc \
+  aarch64-pc-windows-msvc \
   x86_64-apple-darwin \
   aarch64-apple-darwin \
   x86_64-unknown-linux-gnu \
@@ -43,9 +43,6 @@ npx napi build --release --target aarch64-unknown-linux-gnu --use-napi-cross --p
 ```bash
 # Windows x64
 npx napi build --release --target x86_64-pc-windows-msvc --cross-compile --platform
-
-# Windows x86 (32-bit)
-npx napi build --release --target i686-pc-windows-msvc --cross-compile --platform
 ```
 
 ### macOS (requires Zig)
@@ -64,13 +61,8 @@ npx napi build --release --target aarch64-apple-darwin --cross-compile --platfor
 To build everything at once, you can run this one-liner:
 
 ```bash
-rustup target add x86_64-pc-windows-msvc i686-pc-windows-msvc x86_64-apple-darwin aarch64-apple-darwin aarch64-unknown-linux-gnu && \
-npx napi build --release --platform && \
-npx napi build --release --target aarch64-unknown-linux-gnu --use-napi-cross --platform && \
-npx napi build --release --target x86_64-pc-windows-msvc --cross-compile --platform && \
-npx napi build --release --target i686-pc-windows-msvc --cross-compile --platform && \
-npx napi build --release --target x86_64-apple-darwin --cross-compile --platform && \
-npx napi build --release --target aarch64-apple-darwin --cross-compile --platform
+rustup target add x86_64-pc-windows-msvc x86_64-apple-darwin aarch64-apple-darwin aarch64-unknown-linux-gnu && \
+bun run scripts/build_multiplatform.ts
 ```
 
 ## Generated Artifacts
@@ -78,6 +70,5 @@ After running the builds, you will find several `.node` files in the root direct
 - `webtoken.linux-x64-gnu.node`
 - `webtoken.linux-arm64-gnu.node`
 - `webtoken.win32-x64-msvc.node`
-- `webtoken.win32-ia32-msvc.node`
 - `webtoken.darwin-x64.node`
 - `webtoken.darwin-arm64.node`
