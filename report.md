@@ -10,7 +10,7 @@ The `webtoken-rs` library has been successfully modernized from a legacy Bcrypt/
 | Feature | Score (1-10) | Reason / Comment |
 | :--- | :---: | :--- |
 | **Password Security** | **10/10** | **Argon2id** is the OWASP winner and industry gold standard. It is memory-hard and side-channel resistant. |
-| **Token Security** | **10/10** | **PASETO V4.Local** eliminates JWT design flaws (alg confusion) and provides mandatory encryption. |
+| **Token Security** | **10/10** | **PASETO V4 (Local & Public)** eliminates JWT design flaws and supports both Symmetric (XChaCha20) and Asymmetric (Ed25519) flows. |
 | **Performance** | **9.5/10** | Native Rust core is ~4.3x faster than Bun native Bcrypt. Multi-threading support is fully implemented. |
 | **Portability** | **9/10** | **Universal support** (Native + WASM). Scores 9 because WASM build requires manual `wasm-pack` steps. |
 | **API Design** | **9/10** | Modular and clean. Using `cfg-if` keeps the codebase maintainable across targets. |
@@ -25,9 +25,10 @@ The `webtoken-rs` library has been successfully modernized from a legacy Bcrypt/
 - **Evaluation**: The library correctly defaults to recommended parameters (3 iter, 19MB memory) but allows full flexibility.
 
 ### B. PASETO Implementation
-- **Current Spec**: Protocol Version 4, Local (Symmetric Encryption).
-- **Optimization**: Uses **XChaCha20-Poly1305** (AEAD) which is hardware-accelerated on modern CPUs.
-- **Evaluation**: The 32-byte key derivation via SHA-256 is a critical safety feature for user-provided secrets.
+- **Symmetric (V4.Local)**: Uses **XChaCha20-Poly1305** (AEAD) which is hardware-accelerated on modern CPUs.
+- **Asymmetric (V4.Public)**: Implements **Ed25519** (Edwards-curve Digital Signature Algorithm) for secure, high-performance signing.
+- **Key Derivation**: 32-byte key derivation via SHA-256 for Local tokens ensures safety for user-provided secrets.
+- **Key Generation**: Built-in cryptographically secure Ed25519 keypair generation.
 
 ---
 
@@ -44,9 +45,8 @@ The `webtoken-rs` library has been successfully modernized from a legacy Bcrypt/
 - **Reason**: Argon2id can be further accelerated on x86_64 and AArch64 using SIMD instructions, potentially gaining another 15-20% performance.
 
 ### 3. Support for Public-Key PASETO (V4.Public)
-- **Current**: Symmetric only (Local).
-- **Change**: Add support for **Ed25519** signing (V4.Public).
-- **Reason**: To allow cross-service authentication where the consumer does not have the secret key (Asymmetric architecture).
+- **Status**: ✅ **Implemented**
+- **Details**: Added Ed25519 signing and verification with full hex-encoded key management.
 
 ### 4. Zero-Knowledge Proofs (ZKP) Integration
 - **Current**: None.

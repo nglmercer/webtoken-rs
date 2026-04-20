@@ -11,7 +11,8 @@ A high-performance NAPI (Node-API) native addon for **Argon2id password hashing*
 - **Blazing Fast**: Native Rust implementation using `argon2` and `pasetors` crates.
 - **Bun Optimized**: Specifically tuned for use with the Bun runtime.
 - **Type Safe**: Includes full TypeScript definitions automatically generated from Rust.
-- **Modern Security**: Implements **Argon2id** (OWASP recommendation) and **PASETO V4.Local** (secure alternative to JWT).
+- **Modern Security**: Implements **Argon2id** (OWASP recommendation) and **PASETO V4** (Local & Public).
+- **Asymmetric Support**: Built-in **Ed25519** key generation and signing for cross-service authentication.
 
 ## 📦 Installation
 
@@ -21,23 +22,35 @@ bun install webtoken-rs
 
 ## 🛠 Usage
 
+### 1. Argon2id Password Hashing
 ```typescript
-import { hash, compare, create, verify } from "webtoken-rs";
+import { hash, compare } from "webtoken-rs";
 
-// 1. Hash a password
 const hashedPassword = await hash("my-super-secret-password");
-
-// 2. Compare a password
 const isMatch = await compare("my-super-secret-password", hashedPassword);
+```
 
-// 3. Create a PASETO Token (V4 Local)
-// Secure by design: Encrypted, authenticated, and no algorithm confusion risks.
-const token = create({ sub: "user-123", role: "admin" }, "your-secret-key", 3600);
-console.log(`PASETO: ${token}`);
+### 2. PASETO Tokens (V4 Local - Symmetric)
+```typescript
+import { create, verify } from "webtoken-rs";
 
-// 4. Verify a PASETO Token
-const payload = verify(token, "your-secret-key");
-console.log(payload.sub); // "user-123"
+const secret = "your-32-character-secret-key-123";
+const token = create({ sub: "user-123" }, secret, 3600);
+const payload = verify(token, secret);
+```
+
+### 3. PASETO Tokens (V4 Public - Asymmetric)
+```typescript
+import { generateKeys, createPublic, verifyPublic } from "webtoken-rs";
+
+// Generate a valid Ed25519 keypair
+const { secretKey, publicKey } = generateKeys();
+
+// Sign with Secret Key
+const token = createPublic({ sub: "user-123" }, secretKey, 3600);
+
+// Verify with Public Key
+const payload = verifyPublic(token, publicKey);
 ```
 
 

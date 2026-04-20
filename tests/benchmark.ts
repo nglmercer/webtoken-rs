@@ -1,10 +1,10 @@
-import { hash as rustHash, compare as rustCompare, create as rustCreate } from "../index";
+import { hash as rustHash, compare as rustCompare, create as rustCreate, verify as rustVerify, generateKeys, createPublic, verifyPublic } from "../index";
 import { run, bench, group } from "mitata";
 import crypto from "node:crypto";
 
 const password = "benchmarking-is-fun";
 const secret = "super-secret-key-that-is-long-enough-for-hs256";
-const cost = 10;
+const { secretKey, publicKey } = generateKeys();
 
 // Setup
 console.log("Generating hashes for verification benchmark...");
@@ -45,12 +45,34 @@ group("Password Verification", () => {
   });
 });
 
-group("PASETO Creation (V4 Local)", () => {
-  bench("Rust (NAPI/pasetors)", () => {
-    rustCreate({ user: "user-123" }, secret, 3600);
+group("PASETO Tokens (V4 Local)", () => {
+  const payload = { user: "user-123", role: "admin" };
+  const token = rustCreate(payload, secret, 3600);
+
+  bench("Creation (Symmetric)", () => {
+    rustCreate(payload, secret, 3600);
   });
 
-  bench("Node Crypto (Manual HMAC - JWT Baseline)", () => {
+  bench("Verification (Symmetric)", () => {
+    rustVerify(token, secret);
+  });
+});
+
+group("PASETO Tokens (V4 Public - Ed25519)", () => {
+  const payload = { user: "user-123", role: "admin" };
+  const token = createPublic(payload, secretKey, 3600);
+
+  bench("Creation (Asymmetric Sign)", () => {
+    createPublic(payload, secretKey, 3600);
+  });
+
+  bench("Verification (Asymmetric Verify)", () => {
+    verifyPublic(token, publicKey);
+  });
+});
+
+group("Node Crypto Baseline (JWT)", () => {
+  bench("JWT HS256 Creation", () => {
     const header = Buffer.from(JSON.stringify({ alg: "HS256", typ: "JWT" })).toString("base64url");
     const payload = Buffer.from(JSON.stringify({
       sub: "user-123",
