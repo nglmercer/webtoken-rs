@@ -4,14 +4,14 @@
 [![Rust](https://img.shields.io/badge/rust-stable-brightgreen.svg)](https://www.rust-lang.org/)
 [![Bun](https://img.shields.io/badge/Bun-v1.0%2B-blue.svg)](https://bun.sh/)
 
-A high-performance NAPI (Node-API) native addon for **Argon2id password hashing** and **JWT (JSON Web Token) creation**, built with Rust for the Bun runtime.
+A high-performance NAPI (Node-API) native addon for **Argon2id password hashing** and **PASETO (Platform-Agnostic Security Tokens)**, built with Rust for the Bun runtime.
 
 ## 🚀 Features
 
-- **Blazing Fast**: Native Rust implementation using `argon2` and `jsonwebtoken` crates.
+- **Blazing Fast**: Native Rust implementation using `argon2` and `pasetors` crates.
 - **Bun Optimized**: Specifically tuned for use with the Bun runtime.
 - **Type Safe**: Includes full TypeScript definitions automatically generated from Rust.
-- **Modern Security**: Implements **Argon2id** (OWASP recommendation) for password storage and HS256 for tokens.
+- **Modern Security**: Implements **Argon2id** (OWASP recommendation) and **PASETO V4.Local** (secure alternative to JWT).
 
 ## 📦 Installation
 
@@ -22,46 +22,41 @@ bun install webtoken-rs
 ## 🛠 Usage
 
 ```typescript
-import { hash, compare, create } from "webtoken-rs";
+import { hash, compare, create, verify } from "webtoken-rs";
 
-// 1. Hash a password with custom parameters (iterations, memory)
-// Argon2id defaults: 3 iterations, 4096KB memory
-const hashedPassword = hash("my-super-secret-password", 3, 4096);
-console.log(`Hashed: ${hashedPassword}`);
+// 1. Hash a password
+const hashedPassword = await hash("my-super-secret-password");
 
 // 2. Compare a password
-const isMatch = compare("my-super-secret-password", hashedPassword);
-console.log(`Match: ${isMatch}`); // true
+const isMatch = await compare("my-super-secret-password", hashedPassword);
 
-// 3. Create a JWT
-const token = create({ user: "user-123" }, "your-secret-key", 3600);
-console.log(`JWT: ${token}`);
+// 3. Create a PASETO Token (V4 Local)
+// Secure by design: Encrypted, authenticated, and no algorithm confusion risks.
+const token = create({ sub: "user-123", role: "admin" }, "your-secret-key", 3600);
+console.log(`PASETO: ${token}`);
+
+// 4. Verify a PASETO Token
+const payload = verify(token, "your-secret-key");
+console.log(payload.sub); // "user-123"
 ```
 
 
 ## 📊 Benchmarks
 
-Measured on **AMD Ryzen 7 3750H** with **Bun 1.3.12** and **Node Crypto**.
+Measured on **AMD Ryzen 7 3750H** with **Bun 1.3.12**.
 
 ### Password Hashing
 | Implementation | Algorithm | Average Time |
 | :--- | :--- | :--- |
-| **Rust (NAPI)** | **Argon2id** | **~35.20 ms/iter** |
-| Bun (Native) | Bcrypt | 74.87 ms/iter |
-| Node Crypto | Scrypt | 2.50 ms/iter |
+| **Rust (NAPI)** | **Argon2id** | **~52.13 ms/iter** |
+| Bun (Native) | Bcrypt | ~75.15 ms/iter |
 
-### Password Verification
+### Token Creation
 | Implementation | Algorithm | Average Time |
 | :--- | :--- | :--- |
-| Bun (Native) | Bcrypt | 72.10 ms/iter |
-| **Rust (NAPI)** | **Argon2id** | **~38.15 ms/iter** |
+| **Rust (NAPI)** | **PASETO V4.Local** | **~7.84 µs/iter** |
+| Node Crypto | JWT (Manual HMAC) | ~15.02 µs/iter |
 
-
-### JWT Creation (HS256)
-| Implementation | Library | Average Time |
-| :--- | :--- | :--- |
-| **Rust (NAPI)** | **jsonwebtoken** | **4.91 µs/iter** (🚀 **~2.7x Faster**) |
-| Node Crypto | Manual HMAC | 13.11 µs/iter |
 
 > [!TIP]
 > Our Rust implementation is significantly faster at JWT creation because it performs JSON serialization, Base64Url encoding, and HMAC signing in a single high-performance native pass.
