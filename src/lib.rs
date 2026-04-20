@@ -7,26 +7,15 @@ use argon2::{
     },
     Argon2, Params
 };
-use jsonwebtoken::{encode, decode, Header, EncodingKey, DecodingKey, Validation, Algorithm as JwtAlgorithm};
+use pasetors::version4::V4;
+use pasetors::local;
+use pasetors::claims::{Claims, ClaimsValidationRules};
+use pasetors::keys::SymmetricKey;
+use pasetors::token::UntrustedToken;
+use sha2::{Sha256, Digest};
 use chrono::{Utc, Duration};
 use serde_json::{Value, Map};
 
-#[napi]
-pub enum Algorithm {
-  HS256,
-  HS384,
-  HS512,
-}
-
-impl From<Algorithm> for JwtAlgorithm {
-    fn from(a: Algorithm) -> Self {
-        match a {
-            Algorithm::HS256 => JwtAlgorithm::HS256,
-            Algorithm::HS384 => JwtAlgorithm::HS384,
-            Algorithm::HS512 => JwtAlgorithm::HS512,
-        }
-    }
-}
 
 #[napi]
 pub async fn hash(password: String, iterations: Option<u32>, memory: Option<u32>, parallelism: Option<u32>) -> Result<String> {
@@ -66,83 +55,58 @@ pub async fn compare(password: String, hash: String) -> Result<bool> {
     .map_err(|e| Error::from_reason(format!("Task join error: {}", e)))?
 }
 
-
-
-#[napi(object)]
-pub struct TokenHeader {
-  pub algo: String,
-  pub typ: Option<String>,
-  pub kid: Option<String>,
+fn derive_key(secret: &str) -> SymmetricKey<V4> {
+    let mut hasher = Sha256::new();
+    hasher.update(secret.as_bytes());
+    let result = hasher.finalize();
+    SymmetricKey::<V4>::from(result.as_slice()).unwrap()
 }
 
 #[napi]
-pub fn decode_header(token: String) -> Result<TokenHeader> {
-    let header = jsonwebtoken::decode_header(&token)
-        .map_err(|e| Error::from_reason(format!("JWT header decode error: {}", e)))?;
+pub fn create(payload: Map<String, Value>, secret: String, expires_in_seconds: Option<i64>) -> Result<String> {
+    let mut claims = Claims::new().map_err(|e| Error::from_reason(format!("PASETO claims error: {}", e)))?;
     
-    Ok(TokenHeader {
-        algo: format!("{:?}", header.alg),
-        typ: header.typ,
-        kid: header.kid,
-    })
-}
+    for (k, v) in payload {
+        match k.as_str() {
+            "iss" => { if let Some(s) = v.as_str() { claims.issuer(s).map_err(|e| Error::from_reason(format!("PASETO issuer error: {}", e)))?; } },
+            "sub" => { if let Some(s) = v.as_str() { claims.subject(s).map_err(|e| Error::from_reason(format!("PASETO subject error: {}", e)))?; } },
+            "aud" => { if let Some(s) = v.as_str() { claims.audience(s).map_err(|e| Error::from_reason(format!("PASETO audience error: {}", e)))?; } },
+            "jti" => { if let Some(s) = v.as_str() { claims.token_identifier(s).map_err(|e| Error::from_reason(format!("PASETO jti error: {}", e)))?; } },
+            _ => { claims.add_additional(&k, v).map_err(|e| Error::from_reason(format!("PASETO payload error: {}: {}", k, e)))?; }
+        }
+    }
 
-#[napi]
-pub fn create(payload: Map<String, Value>, secret: String, expires_in_seconds: Option<i64>, algorithm: Option<Algorithm>) -> Result<String> {
-    let mut claims = payload;
-    
     if let Some(exp_sec) = expires_in_seconds {
         let expiration = Utc::now()
             .checked_add_signed(Duration::seconds(exp_sec))
-            .ok_or_else(|| Error::from_reason("Invalid expiration time"))?
-            .timestamp();
-        claims.insert("exp".to_string(), Value::Number(expiration.into()));
+            .ok_or_else(|| Error::from_reason("Invalid expiration time"))?;
+        claims.expiration(&expiration.to_rfc3339()).map_err(|e| Error::from_reason(format!("PASETO expiration error: {}", e)))?;
     }
 
-    if !claims.contains_key("iat") {
-        claims.insert("iat".to_string(), Value::Number(Utc::now().timestamp().into()));
+    let key = derive_key(&secret);
+    local::encrypt(&key, &claims, None, None)
+        .map_err(|e| Error::from_reason(format!("PASETO creation error: {}", e)))
+}
+
+
+#[napi]
+pub fn verify(token: String, secret: String) -> Result<Map<String, Value>> {
+    let key = derive_key(&secret);
+    let validation_rules = ClaimsValidationRules::new();
+    
+    let untrusted_token = UntrustedToken::<pasetors::token::Local, V4>::try_from(&token)
+        .map_err(|e| Error::from_reason(format!("Invalid PASETO token: {}", e)))?;
+
+    let verified_claims = local::decrypt(&key, &untrusted_token, &validation_rules, None, None)
+        .map_err(|e| Error::from_reason(format!("PASETO verification error: {}", e)))?;
+
+    let payload = verified_claims.payload();
+    let value: Value = serde_json::from_str(payload)
+        .map_err(|e| Error::from_reason(format!("PASETO payload parse error: {}", e)))?;
+
+    if let Some(obj) = value.as_object() {
+        Ok(obj.clone())
+    } else {
+        Ok(Map::new())
     }
-
-    let algo = algorithm.unwrap_or(Algorithm::HS256);
-    let header = Header::new(algo.into());
-
-    encode(
-        &header,
-        &claims,
-        &EncodingKey::from_secret(secret.as_ref()),
-    )
-    .map_err(|e| Error::from_reason(format!("JWT creation error: {}", e)))
-}
-
-#[napi]
-pub fn verify(token: String, secret: String, algorithm: Option<Algorithm>) -> Result<Map<String, Value>> {
-    let algo = algorithm.unwrap_or(Algorithm::HS256);
-    let mut validation = Validation::new(algo.into());
-    validation.validate_exp = true;
-
-    let token_data = decode::<Map<String, Value>>(
-        &token,
-        &DecodingKey::from_secret(secret.as_ref()),
-        &validation,
-    )
-    .map_err(|e| Error::from_reason(format!("JWT verification error: {}", e)))?;
-
-    Ok(token_data.claims)
-}
-
-#[napi]
-pub fn decode_token(token: String) -> Result<Map<String, Value>> {
-    let mut validation = Validation::default();
-    validation.insecure_disable_signature_validation();
-    validation.validate_exp = false;
-    validation.validate_aud = false;
-
-    let token_data = decode::<Map<String, Value>>(
-        &token,
-        &DecodingKey::from_secret(b""), 
-        &validation,
-    )
-    .map_err(|e| Error::from_reason(format!("JWT decode error: {}", e)))?;
-
-    Ok(token_data.claims)
 }

@@ -45,12 +45,12 @@ group("Password Verification", () => {
   });
 });
 
-group("JWT Creation (HS256)", () => {
-  bench("Rust (NAPI/jsonwebtoken)", () => {
+group("PASETO Creation (V4 Local)", () => {
+  bench("Rust (NAPI/pasetors)", () => {
     rustCreate({ user: "user-123" }, secret, 3600);
   });
 
-  bench("Node Crypto (Manual HMAC)", () => {
+  bench("Node Crypto (Manual HMAC - JWT Baseline)", () => {
     const header = Buffer.from(JSON.stringify({ alg: "HS256", typ: "JWT" })).toString("base64url");
     const payload = Buffer.from(JSON.stringify({
       sub: "user-123",
@@ -65,4 +65,5 @@ group("JWT Creation (HS256)", () => {
 });
 
 await run();
+
 
