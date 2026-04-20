@@ -39,14 +39,29 @@ console.log(`JWT: ${token}`);
 
 ## 📊 Benchmarks
 
-Measured on **AMD Ryzen 7 3750H** with **Bun 1.3.12**.
+Measured on **AMD Ryzen 7 3750H** with **Bun 1.3.12** and **Node Crypto**.
 
-| Operation | Rust (NAPI/Bcrypt) | Bun (Native) |
+### Password Hashing (Cost 10)
+| Implementation | Algorithm | Average Time |
 | :--- | :--- | :--- |
-| **Password Hashing (Cost 10)** | **79.32 ms/iter** | 72.95 ms/iter |
-| **Password Verification** | **73.05 ms/iter** | 73.63 ms/iter |
+| **Rust (NAPI)** | **Bcrypt** | **73.42 ms/iter** |
+| Bun (Native) | Bcrypt | 74.87 ms/iter |
+| Node Crypto | Scrypt | 2.50 ms/iter |
 
-> Our Rust implementation is effectively identical in performance to Bun's native implementation, providing a robust alternative with additional JWT capabilities.
+### Password Verification
+| Implementation | Algorithm | Average Time |
+| :--- | :--- | :--- |
+| Bun (Native) | Bcrypt | 72.10 ms/iter |
+| **Rust (NAPI)** | **Bcrypt** | **76.62 ms/iter** |
+
+### JWT Creation (HS256)
+| Implementation | Library | Average Time |
+| :--- | :--- | :--- |
+| **Rust (NAPI)** | **jsonwebtoken** | **4.91 µs/iter** (🚀 **~2.7x Faster**) |
+| Node Crypto | Manual HMAC | 13.11 µs/iter |
+
+> [!TIP]
+> Our Rust implementation is significantly faster at JWT creation because it performs JSON serialization, Base64Url encoding, and HMAC signing in a single high-performance native pass.
 
 ## 🛠 Development
 

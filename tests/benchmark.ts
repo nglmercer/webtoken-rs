@@ -1,7 +1,9 @@
-import { hash as rustHash, compare as rustCompare } from "../index";
+import { hash as rustHash, compare as rustCompare, create as rustCreate } from "../index";
 import { run, bench, group } from "mitata";
+import crypto from "node:crypto";
 
 const password = "benchmarking-is-fun";
+const secret = "super-secret-key-that-is-long-enough-for-hs256";
 const cost = 10;
 
 // Setup
@@ -12,7 +14,7 @@ const bHash = await Bun.password.hash(password, {
   cost: cost,
 });
 
-group("Password Hashing (Bcrypt, Cost 10)", () => {
+group("Password Hashing (Cost 10)", () => {
   bench("Rust (NAPI/Bcrypt)", () => {
     rustHash(password, cost);
   });
@@ -23,6 +25,11 @@ group("Password Hashing (Bcrypt, Cost 10)", () => {
       cost: cost,
     });
   });
+
+  bench("Node Crypto (Scrypt)", () => {
+    // Scrypt is a different algorithm but also a secure KDF available in Node Crypto
+    crypto.scryptSync(password, "salt-for-scrypt", 64, { cost: 1024 });
+  });
 });
 
 group("Password Verification", () => {
@@ -32,6 +39,25 @@ group("Password Verification", () => {
 
   bench("Bun (Native)", async () => {
     await Bun.password.verify(password, bHash);
+  });
+});
+
+group("JWT Creation (HS256)", () => {
+  bench("Rust (NAPI/jsonwebtoken)", () => {
+    rustCreate("user-123", secret, 3600);
+  });
+
+  bench("Node Crypto (Manual HMAC)", () => {
+    const header = Buffer.from(JSON.stringify({ alg: "HS256", typ: "JWT" })).toString("base64url");
+    const payload = Buffer.from(JSON.stringify({ 
+      sub: "user-123", 
+      exp: Math.floor(Date.now() / 1000) + 3600, 
+      iat: Math.floor(Date.now() / 1000) 
+    })).toString("base64url");
+    const signature = crypto.createHmac("sha256", secret)
+      .update(`${header}.${payload}`)
+      .digest("base64url");
+    return `${header}.${payload}.${signature}`;
   });
 });
 
