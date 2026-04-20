@@ -53,6 +53,38 @@ const token = createPublic({ sub: "user-123" }, secretKey, 3600);
 const payload = verifyPublic(token, publicKey);
 ```
 
+### 4. Zero-Knowledge Passwords (OPAQUE PAKE)
+```typescript
+import { 
+  opaqueGenerateServerSetup, 
+  opaqueClientRegisterStart, 
+  opaqueServerRegisterStart,
+  opaqueClientRegisterFinish,
+  opaqueServerRegisterFinish,
+  opaqueClientLoginStart,
+  opaqueServerLoginStart,
+  opaqueClientLoginFinish,
+  opaqueServerLoginFinish
+} from "webtoken-rs";
+
+// 1. Setup (Server)
+const serverSetup = opaqueGenerateServerSetup();
+
+// 2. Registration (Interactive)
+const { request, state } = opaqueClientRegisterStart("user-password");
+const response = opaqueServerRegisterStart(serverSetup, request, "user@id");
+const { upload, exportKey } = opaqueClientRegisterFinish("user-password", response, state, "user@id");
+const passwordFile = opaqueServerRegisterFinish(upload); // Store this!
+
+// 3. Login (Interactive)
+const { request: loginReq, state: clientState } = opaqueClientLoginStart("user-password");
+const { response: loginRes, state: serverState } = opaqueServerLoginStart(serverSetup, passwordFile, loginReq, "user@id");
+const { finalization, sessionKey } = opaqueClientLoginFinish("user-password", loginRes, clientState, "user@id");
+const serverSessionKey = opaqueServerLoginFinish(finalization, serverState);
+
+// sessionKey === serverSessionKey
+```
+
 
 ## 📊 Benchmarks
 

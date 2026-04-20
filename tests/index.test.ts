@@ -1,5 +1,10 @@
 import { expect, test, describe } from "bun:test";
-import { hash, compare, create, verify, generateKeys, createPublic, verifyPublic, decodeToken } from "../index";
+import { 
+  hash, compare, create, verify, generateKeys, createPublic, verifyPublic, decodeToken,
+  opaqueGenerateServerSetup, 
+  opaqueClientRegisterStart, opaqueServerRegisterStart, opaqueClientRegisterFinish, opaqueServerRegisterFinish,
+  opaqueClientLoginStart, opaqueServerLoginStart, opaqueClientLoginFinish, opaqueServerLoginFinish
+} from "../index";
 
 describe("Webtoken NAPI Tests", () => {
   const password = "my-secure-password";
@@ -112,6 +117,68 @@ describe("Webtoken NAPI Tests", () => {
     test("decodeToken should throw error for local tokens (unsupported)", () => {
       const token = create({ sub: "test" }, secret, 3600);
       expect(() => decodeToken(token)).toThrow();
+    });
+  });
+
+  describe("OPAQUE (PAKE) Zero-Knowledge Auth", () => {
+    const userPass = "secure-p@ss-123";
+    const userEmail = "test@example.com";
+    const srvId = "test-server";
+
+    test("should complete full registration and login flow", () => {
+      // 1. Setup
+      const serverSetup = opaqueGenerateServerSetup();
+      expect(serverSetup).toBeDefined();
+
+      // 2. Registration
+      const regStart = opaqueClientRegisterStart(userPass);
+      expect(regStart.request).toBeDefined();
+      expect(regStart.state).toBeDefined();
+
+      const regResponse = opaqueServerRegisterStart(serverSetup, regStart.request, userEmail);
+      expect(regResponse).toBeDefined();
+
+      const regFinish = opaqueClientRegisterFinish(userPass, regResponse, regStart.state, userEmail, srvId);
+      expect(regFinish.upload).toBeDefined();
+      expect(regFinish.exportKey).toBeDefined();
+
+      const passwordFile = opaqueServerRegisterFinish(regFinish.upload);
+      expect(passwordFile).toBeDefined();
+
+      // 3. Login
+      const loginStart = opaqueClientLoginStart(userPass);
+      const loginChallenge = opaqueServerLoginStart(serverSetup, passwordFile, loginStart.request, userEmail, srvId);
+      expect(loginChallenge.response).toBeDefined();
+
+      const loginFinish = opaqueClientLoginFinish(userPass, loginChallenge.response, loginStart.state, userEmail, srvId);
+      expect(loginFinish.finalization).toBeDefined();
+      expect(loginFinish.sessionKey).toBeDefined();
+
+      const serverSessionKey = opaqueServerLoginFinish(loginFinish.finalization, loginChallenge.state);
+      
+      // Verification
+      expect(serverSessionKey).toBe(loginFinish.sessionKey);
+    });
+
+    test("should fail login with wrong password", () => {
+      const serverSetup = opaqueGenerateServerSetup();
+      
+      // Register with correct pass
+      const regStart = opaqueClientRegisterStart(userPass);
+      const regResp = opaqueServerRegisterStart(serverSetup, regStart.request, userEmail);
+      const regFin = opaqueClientRegisterFinish(userPass, regResp, regStart.state, userEmail, srvId);
+      const passwordFile = opaqueServerRegisterFinish(regFin.upload);
+
+      // Login with WRONG pass
+      const wrongPass = "wrong-password";
+      const loginStart = opaqueClientLoginStart(wrongPass);
+      const loginChallenge = opaqueServerLoginStart(serverSetup, passwordFile, loginStart.request, userEmail, srvId);
+      
+      // Client should fail to finish login (or derive wrong key/finalization)
+      // Usually opaqueClientLoginFinish will throw if the unmasking fails or MAC is invalid
+      expect(() => {
+        opaqueClientLoginFinish(wrongPass, loginChallenge.response, loginStart.state, userEmail, srvId);
+      }).toThrow();
     });
   });
 });

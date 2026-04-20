@@ -49,9 +49,8 @@ The `webtoken-rs` library has been successfully modernized from a legacy Bcrypt/
 - **Details**: Added Ed25519 signing and verification with full hex-encoded key management.
 
 ### 4. Zero-Knowledge Proofs (ZKP) Integration
-- **Current**: None.
-- **Change**: Add support for OPAQUE or similar PAKE protocols.
-- **Reason**: To allow users to authenticate without ever sending their actual password (even hashed) to the server.
+- **Status**: ✅ **Implemented**
+- **Details**: Full OPAQUE (PAKE) support implemented using `opaque-ke` 4.0.1. Supports multi-step registration and login flows with session key derivation and export key support.
 
 ---
 

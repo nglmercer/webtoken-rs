@@ -30,7 +30,7 @@ pasetors = { version = "0.7", features = ["serde"] }
 ed25519-compact = "2.1"
 
 # OPAQUE PAKE (Zero-Knowledge Passwords)
-opaque-ke = { version = "4.0", features = ["std"] }
+opaque-ke = { version = "4.0", features = ["std", "argon2"] }
 rand = "0.8"
 
 # Shared Utilities

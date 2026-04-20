@@ -69,6 +69,103 @@ pub fn generate_keys() -> Result<Map<String, Value>> {
 
 #[cfg(feature = "napi-base")]
 #[napi]
+pub fn opaque_generate_server_setup() -> String {
+    opaque::internal_opaque_server_setup()
+}
+
+#[cfg(feature = "napi-base")]
+#[napi]
+pub fn opaque_client_register_start(password: String) -> Result<Map<String, Value>> {
+    let res = opaque::internal_client_register_start(&password).map_err(|e| Error::from_reason(e))?;
+    let mut map = Map::new();
+    map.insert("request".to_string(), Value::String(res.request));
+    map.insert("state".to_string(), Value::String(res.state));
+    Ok(map)
+}
+
+#[cfg(feature = "napi-base")]
+#[napi]
+pub fn opaque_server_register_start(server_setup_hex: String, request_hex: String, client_id: String) -> Result<String> {
+    opaque::internal_server_register_start(&server_setup_hex, &request_hex, &client_id).map_err(|e| Error::from_reason(e))
+}
+
+#[cfg(feature = "napi-base")]
+#[napi]
+pub fn opaque_client_register_finish(
+    password: String,
+    response_hex: String,
+    state_hex: String,
+    client_id: Option<String>,
+    server_id: Option<String>,
+) -> Result<Map<String, Value>> {
+    let res = opaque::internal_client_register_finish(&password, &response_hex, &state_hex, client_id, server_id)
+        .map_err(|e| Error::from_reason(e))?;
+    let mut map = Map::new();
+    map.insert("upload".to_string(), Value::String(res.upload));
+    map.insert("exportKey".to_string(), Value::String(res.export_key));
+    Ok(map)
+}
+
+#[cfg(feature = "napi-base")]
+#[napi]
+pub fn opaque_server_register_finish(upload_hex: String) -> Result<String> {
+    opaque::internal_server_register_finish(&upload_hex).map_err(|e| Error::from_reason(e))
+}
+
+#[cfg(feature = "napi-base")]
+#[napi]
+pub fn opaque_client_login_start(password: String) -> Result<Map<String, Value>> {
+    let res = opaque::internal_client_login_start(&password).map_err(|e| Error::from_reason(e))?;
+    let mut map = Map::new();
+    map.insert("request".to_string(), Value::String(res.request));
+    map.insert("state".to_string(), Value::String(res.state));
+    Ok(map)
+}
+
+#[cfg(feature = "napi-base")]
+#[napi]
+pub fn opaque_server_login_start(
+    server_setup_hex: String,
+    password_file_hex: String,
+    request_hex: String,
+    client_id: String,
+    server_id: Option<String>,
+) -> Result<Map<String, Value>> {
+    let res = opaque::internal_server_login_start(&server_setup_hex, &password_file_hex, &request_hex, &client_id, server_id)
+        .map_err(|e| Error::from_reason(e))?;
+    let mut map = Map::new();
+    map.insert("response".to_string(), Value::String(res.response));
+    map.insert("state".to_string(), Value::String(res.state));
+    Ok(map)
+}
+
+#[cfg(feature = "napi-base")]
+#[napi]
+pub fn opaque_client_login_finish(
+    password: String,
+    response_hex: String,
+    state_hex: String,
+    client_id: Option<String>,
+    server_id: Option<String>,
+) -> Result<Map<String, Value>> {
+    let res = opaque::internal_client_login_finish(&password, &response_hex, &state_hex, client_id, server_id)
+        .map_err(|e| Error::from_reason(e))?;
+    let mut map = Map::new();
+    map.insert("finalization".to_string(), Value::String(res.finalization));
+    map.insert("sessionKey".to_string(), Value::String(res.session_key));
+    map.insert("exportKey".to_string(), Value::String(res.export_key));
+    map.insert("serverPublicKey".to_string(), Value::String(res.server_public_key));
+    Ok(map)
+}
+
+#[cfg(feature = "napi-base")]
+#[napi]
+pub fn opaque_server_login_finish(finalization_hex: String, state_hex: String) -> Result<String> {
+    opaque::internal_server_login_finish(&finalization_hex, &state_hex).map_err(|e| Error::from_reason(e))
+}
+
+#[cfg(feature = "napi-base")]
+#[napi]
 pub fn decode_token(_token: String) -> Result<Map<String, Value>> {
     Err(Error::from_reason("PASETO local tokens are encrypted and cannot be decoded without the secret key."))
 }

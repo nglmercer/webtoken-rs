@@ -44,6 +44,16 @@ async function main() {
   } catch (error) {
     console.error("Asymmetric flow failed:", error);
   }
+
+  console.log("\n--- 3. OPAQUE (PAKE) Registration ---");
+  const { opaqueGenerateServerSetup, opaqueClientRegisterStart, opaqueServerRegisterStart } = await import("../index");
+
+  const setup = opaqueGenerateServerSetup();
+  const { request } = opaqueClientRegisterStart("secret-password");
+  const response = opaqueServerRegisterStart(setup, request, "user-id");
+
+  console.log("OPAQUE Challenge generated successfully.", response);
+  console.log("See examples/opaque_demo.ts for the full login flow.");
 }
 
 main().catch(console.error);
