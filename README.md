@@ -48,14 +48,22 @@ Measured on **AMD Ryzen 7 3750H** with **Bun 1.3.12**.
 ### Password Hashing
 | Implementation | Algorithm | Average Time |
 | :--- | :--- | :--- |
-| **Rust (NAPI)** | **Argon2id** | **~52.13 ms/iter** |
-| Bun (Native) | Bcrypt | ~75.15 ms/iter |
+| **Rust (NAPI)** | **Argon2id (Default)** | **~55.47 ms/iter** (🚀 **Faster**) |
+| **Rust (NAPI)** | **Argon2id (High Mem)** | **~50.96 ms/iter** |
+| Bun (Native) | Bcrypt (Cost 10) | ~87.88 ms/iter |
+
+### Password Verification
+| Implementation | Algorithm | Average Time |
+| :--- | :--- | :--- |
+| **Rust (NAPI)** | **Argon2id** | **~17.84 ms/iter** (🚀 **~4.3x Faster**) |
+| Bun (Native) | Bcrypt | ~77.47 ms/iter |
 
 ### Token Creation
 | Implementation | Algorithm | Average Time |
 | :--- | :--- | :--- |
-| **Rust (NAPI)** | **PASETO V4.Local** | **~7.84 µs/iter** |
-| Node Crypto | JWT (Manual HMAC) | ~15.02 µs/iter |
+| **Rust (NAPI)** | **PASETO V4.Local** | **~18.58 µs/iter** |
+| Node Crypto | JWT (Manual HMAC) | ~13.63 µs/iter |
+
 
 
 > [!TIP]
