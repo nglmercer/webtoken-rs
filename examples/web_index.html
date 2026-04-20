@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Webtoken-rs WASM Demo</title>
+    <style>
+        body { font-family: system-ui; padding: 2rem; background: #0f172a; color: white; }
+        .card { background: #1e293b; padding: 1.5rem; border-radius: 8px; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1); margin-bottom: 1rem; }
+        input, button { padding: 0.5rem; border-radius: 4px; border: 1px solid #334155; background: #0f172a; color: white; width: 100%; box-sizing: border-box; margin-bottom: 0.5rem; }
+        button { background: #3b82f6; cursor: pointer; border: none; font-weight: bold; }
+        pre { background: #0f172a; padding: 1rem; border-radius: 4px; overflow-x: auto; color: #38bdf8; }
+    </style>
+</head>
+<body>
+    <h1>Webtoken-rs WASM Demo</h1>
+    
+    <div class="card">
+        <h3>1. Password Hashing</h3>
+        <input type="text" id="password" value="my-secure-password">
+        <button id="hashBtn">Hash Password</button>
+        <pre id="hashOutput">Click the button...</pre>
+    </div>
+
+    <div class="card">
+        <h3>2. PASETO Token</h3>
+        <button id="tokenBtn">Generate & Verify Token</button>
+        <pre id="tokenOutput">Click the button...</pre>
+    </div>
+
+    <script type="module">
+        // Note: In a real project, you would build with `wasm-pack build --target web`
+        // and import from the generated `pkg` folder.
+        // import init, { hash_wasm, create_wasm, verify_wasm } from './pkg/webtoken.js';
+
+        async function run() {
+            // Mocking the WASM initialization for demonstration
+            console.log("WASM Module would initialize here.");
+            
+            document.getElementById('hashBtn').onclick = () => {
+                const pass = document.getElementById('password').value;
+                // const hashed = hash_wasm(pass);
+                document.getElementById('hashOutput').innerText = `Hashed: $argon2id$v=19$m=19456... (WASM COMPATIBLE)`;
+            };
+
+            document.getElementById('tokenBtn').onclick = () => {
+                const secret = "your-32-character-secret-key-123";
+                const payload = JSON.stringify({ sub: "user_123", role: "admin" });
+                // const token = create_wasm(payload, secret, 3600);
+                // const verified = verify_wasm(token, secret);
+                document.getElementById('tokenOutput').innerText = `Token: v4.local.XXXX...\n\nVerified Payload: {"sub":"user_123","role":"admin",...}`;
+            };
+        }
+
+        run();
+    </script>
+</body>
+</html>
