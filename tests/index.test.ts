@@ -1,10 +1,12 @@
 import { expect, test, describe } from "bun:test";
 import { 
   hash, compare, create, verify, generateKeys, createPublic, verifyPublic, decodeToken,
+  parsePaseto, decodePublicPayload,
   opaqueGenerateServerSetup, 
   opaqueClientRegisterStart, opaqueServerRegisterStart, opaqueClientRegisterFinish, opaqueServerRegisterFinish,
   opaqueClientLoginStart, opaqueServerLoginStart, opaqueClientLoginFinish, opaqueServerLoginFinish
 } from "../index";
+import { parseToken, decodePublicPayload as tsDecodePublicPayload, verifyTokenFormat } from "../src/paseto-parser";
 
 describe("Webtoken NAPI Tests", () => {
   const password = "my-secure-password";
@@ -117,6 +119,92 @@ describe("Webtoken NAPI Tests", () => {
     test("decodeToken should throw error for local tokens (unsupported)", () => {
       const token = create({ sub: "test" }, secret, 3600);
       expect(() => decodeToken(token)).toThrow();
+    });
+  });
+
+  describe("Custom Parser (NAPI Rust)", () => {
+    test("parsePaseto should extract local token components", () => {
+      const token = create({ sub: "user-123" }, secret, 3600);
+      const parsed = parsePaseto(token);
+      expect(parsed.version).toBe("v4");
+      expect(parsed.purpose).toBe("local");
+      expect(parsed.payload.length).toBeGreaterThan(0);
+      expect(parsed.footer).toBe("");
+    });
+
+    test("parsePaseto should extract public token components", () => {
+      const keys = generateKeys();
+      const token = createPublic({ sub: "user-public" }, keys.secretKey, 3600);
+      const parsed = parsePaseto(token);
+      expect(parsed.version).toBe("v4");
+      expect(parsed.purpose).toBe("public");
+      expect(parsed.payload.length).toBeGreaterThan(0);
+    });
+
+    test("parsePaseto should throw on invalid token", () => {
+      expect(() => parsePaseto("invalid-token")).toThrow();
+    });
+
+    test("decodePublicPayload should extract claims from public token", () => {
+      const keys = generateKeys();
+      const payload = { sub: "user-public", role: "editor", custom_field: "value" };
+      const token = createPublic(payload, keys.secretKey, 3600);
+      const decoded = decodePublicPayload(token);
+      expect(decoded.sub).toBe(payload.sub);
+      expect(decoded.role).toBe(payload.role);
+      expect(decoded.custom_field).toBe(payload.custom_field);
+    });
+
+    test("decodePublicPayload should throw on local token", () => {
+      const token = create({ sub: "test" }, secret, 3600);
+      expect(() => decodePublicPayload(token)).toThrow();
+    });
+  });
+
+  describe("Custom Parser (TypeScript)", () => {
+    test("parseToken should extract local token components", () => {
+      const token = create({ sub: "user-123" }, secret, 3600);
+      const parsed = parseToken(token);
+      expect(parsed.version).toBe("v4");
+      expect(parsed.purpose).toBe("local");
+      expect(parsed.payload.length).toBeGreaterThan(0);
+    });
+
+    test("parseToken should extract public token components", () => {
+      const keys = generateKeys();
+      const token = createPublic({ sub: "user-public" }, keys.secretKey, 3600);
+      const parsed = parseToken(token);
+      expect(parsed.version).toBe("v4");
+      expect(parsed.purpose).toBe("public");
+    });
+
+    test("parseToken should throw on invalid format", () => {
+      expect(() => parseToken("not-a-token")).toThrow();
+      expect(() => parseToken("v3.local.xxx")).toThrow();
+      expect(() => parseToken("v4.unknown.xxx")).toThrow();
+    });
+
+    test("TS decodePublicPayload should extract claims from public token", () => {
+      const keys = generateKeys();
+      const payload = { sub: "user", role: "admin", data: 42 };
+      const token = createPublic(payload, keys.secretKey, 3600);
+      const decoded = tsDecodePublicPayload(token);
+      expect(decoded.sub).toBe(payload.sub);
+      expect(decoded.role).toBe(payload.role);
+      expect(decoded.data).toBe(payload.data);
+    });
+
+    test("verifyTokenFormat should validate token structure", () => {
+      const token = create({ sub: "test" }, secret, 3600);
+      const result = verifyTokenFormat(token);
+      expect(result.isValid).toBe(true);
+      expect(result.type).toBe("local");
+      expect(result.version).toBe("v4");
+    });
+
+    test("verifyTokenFormat should not throw on invalid tokens", () => {
+      const result = verifyTokenFormat("garbage");
+      expect(result.isValid).toBe(false);
     });
   });
 
