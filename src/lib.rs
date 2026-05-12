@@ -1,4 +1,8 @@
 
+#[cfg(not(target_env = "msvc"))]
+#[global_allocator]
+static GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;
+
 mod argon;
 mod paseto;
 mod opaque;

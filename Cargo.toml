@@ -41,6 +41,7 @@ sha2 = "0.10"
 hex = "0.4"
 base64 = "0.22"
 getrandom = { version = "0.2" }
+mimalloc = "0.1"
 
 [build-dependencies]
 napi-build = { version = "2.1", optional = true }
@@ -54,4 +55,4 @@ lto = true
 codegen-units = 1
 panic = "abort"
 strip = true
-opt-level = "z"
+opt-level = 3

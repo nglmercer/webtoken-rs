@@ -141,12 +141,12 @@ fn base64url_decode(input: &str) -> Result<Vec<u8>, String> {
     let mut b64 = input.to_string();
     match b64.len() % 4 {
         2 => b64.push_str("=="),
-        3 => b64.push_str("="),
+        3 => b64.push('='),
         _ => {}
     }
     b64 = b64.replace('-', "+").replace('_', "/");
-    base64::Engine::decode(&base64::engine::general_purpose::STANDARD, &b64)
+    use base64::Engine;
+    base64::engine::general_purpose::STANDARD
+        .decode(&b64)
         .map_err(|e| format!("Base64 decode error: {}", e))
 }
-
-use base64;
