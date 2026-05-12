@@ -1,4 +1,4 @@
-#[cfg(not(target_env = "msvc"))]
+#[cfg(all(not(target_env = "msvc"), not(all(target_arch = "aarch64", target_os = "linux", target_env = "gnu"))))]
 #[global_allocator]
 static GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;
 
