@@ -1,6 +1,6 @@
 import { expect, test, describe } from "bun:test";
 import { 
-  hash, compare, create, verify, generateKeys, createPublic, verifyPublic, decodeToken,
+  hash, compare, scryptHash, scryptCompare, create, verify, generateKeys, createPublic, verifyPublic, decodeToken,
   parsePaseto, decodePublicPayload,
   opaqueGenerateServerSetup, 
   opaqueClientRegisterStart, opaqueServerRegisterStart, opaqueClientRegisterFinish, opaqueServerRegisterFinish,
@@ -54,6 +54,33 @@ describe("Webtoken NAPI Tests", () => {
     test("should respect custom parallelism", async () => {
       const result = await hash(password, 2, 4096, 4); // p=4
       expect(result).toContain("p=4");
+    });
+  });
+
+  describe("Scrypt Hashing", () => {
+    test("should hash password successfully", async () => {
+      const result = await scryptHash(password);
+      expect(result).toBeDefined();
+      expect(result).toStartWith("$scrypt$");
+    });
+
+    test("should compare correct password", async () => {
+      const hashed = await scryptHash(password);
+      const isMatch = await scryptCompare(password, hashed);
+      expect(isMatch).toBe(true);
+    });
+
+    test("should fail on wrong password", async () => {
+      const hashed = await scryptHash(password);
+      const isMatch = await scryptCompare("wrong-password", hashed);
+      expect(isMatch).toBe(false);
+    });
+
+    test("should respect custom parameters", async () => {
+      const result = await scryptHash(password, 10, 8, 1); // logN=10, r=8, p=1
+      expect(result).toContain("ln=10");
+      expect(result).toContain("r=8");
+      expect(result).toContain("p=1");
     });
   });
 

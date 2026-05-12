@@ -1,12 +1,13 @@
-import { 
-  hash as rustHash, 
-  compare as rustCompare, 
+import {
+  hash as rustHash,
+  compare as rustCompare,
   scryptHash as rustScryptHash,
-  create as rustCreate, 
-  verify as rustVerify, 
-  generateKeys, 
-  createPublic, 
-  verifyPublic 
+  scryptCompare as rustScryptCompare,
+  create as rustCreate,
+  verify as rustVerify,
+  generateKeys,
+  createPublic,
+  verifyPublic
 } from "../index";
 import { run, bench, group } from "mitata";
 import crypto from "node:crypto";
@@ -18,10 +19,16 @@ const { secretKey, publicKey } = generateKeys();
 // Setup
 console.log("Generating hashes for verification benchmark...");
 const rHash = await rustHash(password, 3, 4096, 1);
+const sHash = await rustScryptHash(password, 15);
+const sHashLow = await rustScryptHash(password, 10);
 
 group("Password Hashing Comparison", () => {
-  bench("Rust (Argon2id) - 3 iter, 4MB", async () => {
+  bench("Rust (Argon2id) - 3 iter, 4MB, p=1", async () => {
     await rustHash(password, 3, 4096, 1);
+  });
+
+  bench("Rust (Argon2id) - 3 iter, 4MB, p=4", async () => {
+    await rustHash(password, 3, 4096, 4);
   });
 
   bench("Rust (Scrypt) - Default (logN=15)", async () => {
@@ -37,9 +44,17 @@ group("Password Hashing Comparison", () => {
   });
 });
 
-group("Password Verification", () => {
-  bench("Rust (NAPI/Argon2id)", async () => {
+group("Password Verification Comparison", () => {
+  bench("Rust (Argon2id) - 3 iter, 4MB", async () => {
     await rustCompare(password, rHash);
+  });
+
+  bench("Rust (Scrypt) - Default (logN=15)", async () => {
+    await rustScryptCompare(password, sHash);
+  });
+
+  bench("Rust (Scrypt) - Low (logN=10)", async () => {
+    await rustScryptCompare(password, sHashLow);
   });
 });
 
