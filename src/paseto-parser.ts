@@ -13,7 +13,7 @@ export interface ParsedPasetoToken extends PasetoTokenParts {
   isValid: boolean;
 }
 
-function base64UrlDecode(input: string): Uint8Array {
+export function base64UrlDecode(input: string): Uint8Array {
   const b64 = input
     .replace(/-/g, "+")
     .replace(/_/g, "/")
@@ -64,7 +64,7 @@ export function decodePublicPayload(token: string): Record<string, unknown> {
     throw new Error("Public token payload too short to contain signature");
   }
 
-  const jsonBytes = decoded.slice(64);
+  const jsonBytes = decoded.slice(0, decoded.length - 64);
   const jsonStr = new TextDecoder().decode(jsonBytes);
   return JSON.parse(jsonStr);
 }

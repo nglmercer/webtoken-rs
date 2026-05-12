@@ -98,7 +98,7 @@ pub struct TokenParts<'a> {
     pub footer: &'a str,
 }
 
-pub fn parse_token(token: &str) -> Result<TokenParts, String> {
+pub fn parse_token(token: &str) -> Result<TokenParts<'_>, String> {
     let parts: Vec<&str> = token.splitn(4, '.').collect();
     if parts.len() < 3 {
         return Err("Invalid PASETO token: expected at least 3 dot-separated parts".into());
@@ -130,7 +130,7 @@ pub fn decode_public_payload(token: &str) -> Result<Map<String, Value>, String> 
     if decoded.len() < 64 {
         return Err("Public token payload too short to contain signature".into());
     }
-    let json_bytes = &decoded[64..];
+    let json_bytes = &decoded[..decoded.len() - 64];
     let payload_str = std::str::from_utf8(json_bytes)
         .map_err(|_| "Invalid UTF-8 in payload".to_string())?;
 
