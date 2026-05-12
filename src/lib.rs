@@ -4,6 +4,7 @@
 static GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;
 
 mod argon;
+mod scrypt;
 mod paseto;
 mod opaque;
 
@@ -19,6 +20,17 @@ use serde_json::{Value, Map};
 pub async fn hash(password: String, iterations: Option<u32>, memory: Option<u32>, parallelism: Option<u32>) -> Result<String> {
     tokio::task::spawn_blocking(move || {
         argon::internal_hash(password, iterations, memory, parallelism)
+    })
+    .await
+    .map_err(|e| Error::from_reason(format!("Task join error: {}", e)))?
+    .map_err(|e| Error::from_reason(e))
+}
+
+#[cfg(feature = "napi-base")]
+#[napi]
+pub async fn scrypt_hash(password: String, log_n: Option<u8>, r: Option<u32>, p: Option<u32>) -> Result<String> {
+    tokio::task::spawn_blocking(move || {
+        scrypt::internal_scrypt_hash(password, log_n, r, p)
     })
     .await
     .map_err(|e| Error::from_reason(format!("Task join error: {}", e)))?
@@ -67,6 +79,17 @@ pub struct OpaqueLoginFinishResult {
 pub async fn compare(password: String, hash: String) -> Result<bool> {
     tokio::task::spawn_blocking(move || {
         argon::internal_compare(password, hash)
+    })
+    .await
+    .map_err(|e| Error::from_reason(format!("Task join error: {}", e)))?
+    .map_err(|e| Error::from_reason(e))
+}
+
+#[cfg(feature = "napi-base")]
+#[napi]
+pub async fn scrypt_compare(password: String, hash: String) -> Result<bool> {
+    tokio::task::spawn_blocking(move || {
+        scrypt::internal_scrypt_compare(password, hash)
     })
     .await
     .map_err(|e| Error::from_reason(format!("Task join error: {}", e)))?

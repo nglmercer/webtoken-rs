@@ -24,6 +24,7 @@ tokio = { version = "1", features = ["full"], optional = true }
 
 # Hashing (with SIMD acceleration)
 argon2 = { version = "0.5", features = ["password-hash", "std"] }
+scrypt = { version = "0.11", features = ["password-hash"] }
 
 # PASETO (V4 Local & Public)
 pasetors = { version = "0.7", features = ["serde"] }
@@ -40,7 +41,6 @@ chrono = "0.4"
 sha2 = "0.10"
 hex = "0.4"
 base64 = "0.22"
-getrandom = { version = "0.2" }
 mimalloc = "0.1"
 
 [build-dependencies]

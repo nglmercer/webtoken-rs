@@ -1,4 +1,13 @@
-import { hash as rustHash, compare as rustCompare, create as rustCreate, verify as rustVerify, generateKeys, createPublic, verifyPublic } from "../index";
+import { 
+  hash as rustHash, 
+  compare as rustCompare, 
+  scryptHash as rustScryptHash,
+  create as rustCreate, 
+  verify as rustVerify, 
+  generateKeys, 
+  createPublic, 
+  verifyPublic 
+} from "../index";
 import { run, bench, group } from "mitata";
 import crypto from "node:crypto";
 
@@ -9,28 +18,21 @@ const { secretKey, publicKey } = generateKeys();
 // Setup
 console.log("Generating hashes for verification benchmark...");
 const rHash = await rustHash(password, 3, 4096, 1);
-const bHash = await Bun.password.hash(password, {
-  algorithm: "bcrypt",
-  cost: 10,
-});
 
-group("Password Hashing (Argon2id vs Bcrypt)", () => {
-  bench("Rust (NAPI/Argon2id) - Default (3 iter, 4MB)", async () => {
-    await rustHash(password);
+group("Password Hashing Comparison", () => {
+  bench("Rust (Argon2id) - 3 iter, 4MB", async () => {
+    await rustHash(password, 3, 4096, 1);
   });
 
-  bench("Rust (NAPI/Argon2id) - High Mem (2 iter, 16MB)", async () => {
-    await rustHash(password, 2, 16384);
+  bench("Rust (Scrypt) - Default (logN=15)", async () => {
+    await rustScryptHash(password);
   });
 
-  bench("Bun (Native/Bcrypt) - Cost 10", async () => {
-    await Bun.password.hash(password, {
-      algorithm: "bcrypt",
-      cost: 10,
-    });
+  bench("Rust (Scrypt) - Low (logN=10)", async () => {
+    await rustScryptHash(password, 10);
   });
 
-  bench("Node Crypto (Scrypt)", () => {
+  bench("Node Crypto (Scrypt) - Cost 1024", () => {
     crypto.scryptSync(password, "salt-for-scrypt", 64, { cost: 1024 });
   });
 });
@@ -38,10 +40,6 @@ group("Password Hashing (Argon2id vs Bcrypt)", () => {
 group("Password Verification", () => {
   bench("Rust (NAPI/Argon2id)", async () => {
     await rustCompare(password, rHash);
-  });
-
-  bench("Bun (Native/Bcrypt)", async () => {
-    await Bun.password.verify(password, bHash);
   });
 });
 
